@@ -9,7 +9,7 @@ class GroundProjection(object):
         This is used to calculate the group projection if a corordinate in a pixel
 
     """
-    def __init__(self, Points):
+    def __init__(self):
         self.projectedPoints_start = []
         self.projectedPoints_end = []
         h = [-1.27373e-05, -0.0002421778, -0.1970125, 0.001029818, -1.578045e-05, -0.337324, -0.0001088811, -0.007584862, 1]
@@ -17,15 +17,15 @@ class GroundProjection(object):
         self.Hinv = np.linalg.inv(self.H)
         self.image_width = 640      #default image size from Picamera
         self.image_height = 480     #default image size from Picamera
-        if isinstance(Points, np.ndarray):
-            for x1, y1, x2, y2 in Points:
-                x_1, y_1, z_1 = self.vector2ground([x1, y1])
-                x_2, y_2, z_2 = self.vector2ground([x2, y2])
-                self.projectedPoints_start.append([x_1, y_1, z_1])
-                self.projectedPoints_end.append([x_2, y_2, z_2])
-        else:
-            self.projectedPoints_start = np.array([0., 0., 0.])
-            self.projectedPoints_end = np.array([0., 0., 0.])
+        # if isinstance(Points, np.ndarray):
+        #     for x1, y1, x2, y2 in Points:
+        #         x_1, y_1, z_1 = self.vector2ground([x1, y1])
+        #         x_2, y_2, z_2 = self.vector2ground([x2, y2])
+        #         self.projectedPoints_start.append([x_1, y_1, z_1])
+        #         self.projectedPoints_end.append([x_2, y_2, z_2])
+        # else:
+        #     self.projectedPoints_start = np.array([0., 0., 0.])
+        #     self.projectedPoints_end = np.array([0., 0., 0.])
 
     def vector2pixel(self, vec):
         """ Converts a [0,1]*[0,1] representation to [0, W]x[0, H]. """
