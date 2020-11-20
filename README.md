@@ -8,5 +8,6 @@ Contains the imaging pipeline of a Line detector node in Duckietown-Lanefollowin
 ![](Images/edge.png)
 ## Image with normals point and detected lines
 ![](Images/image_with_lines.png)
+
 ![](ezgif.com-gif-maker.gif )
 
