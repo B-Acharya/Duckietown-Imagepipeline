@@ -1,5 +1,5 @@
 # Duckietown-Imagepipeline
-Contains the imaging pipeline of a Line detector node in Duckietown-Lanefollowing model  
+Contains the imaging pipeline of a Line detector node in Duckietown-Lanefollowing model  from www.duckietown.org
 ## Input Image
 ![Input Image](Images/image4.png)
 ## Color Segmentation
