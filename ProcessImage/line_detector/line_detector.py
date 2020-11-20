@@ -34,6 +34,8 @@ class LineDetectorHSV():
         # threshold colors in HSV space
         if color == 'white':
             bw = cv2.inRange(self.hsv, self.hsv_white1, self.hsv_white2)
+            # cv2.imshow("white",bw)
+            # cv2.waitKey(0)
         elif color == 'yellow':
             bw = cv2.inRange(self.hsv, self.hsv_yellow1, self.hsv_yellow2)
         elif color == 'red':
@@ -46,15 +48,19 @@ class LineDetectorHSV():
         # binary dilation
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (self.dilation_kernel_size, self.dilation_kernel_size))
         bw = cv2.dilate(bw, kernel)
-
+        # cv2.imshow("After kernel", bw)
+        # cv2.waitKey(0)
         # refine edge for certain color
         edge_color = cv2.bitwise_and(bw, self.edges)
+        # cv2.imshow("After OR with edges", edge_color)
+        # cv2.waitKey(0)
 
         return bw, edge_color
 
     def _findEdge(self, gray):
         edges = cv2.Canny(gray, self.canny_thresholds[0], self.canny_thresholds[1], apertureSize=3)
-
+        # cv2.imshow("edges",edges)
+        # cv2.waitKey(0)
         return edges
 
     def _HoughLine(self, edge):
@@ -114,6 +120,8 @@ class LineDetectorHSV():
     def setImage(self, bgr):
         self.bgr = np.copy(bgr)
         self.hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
+        # cv2.imshow("HSV",self.hsv)
+        # cv2.waitKey(0)
         self.edges = self._findEdge(self.bgr)
 
     def getImage(self):

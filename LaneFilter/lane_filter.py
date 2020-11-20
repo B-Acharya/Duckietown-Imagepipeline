@@ -1,5 +1,5 @@
 from collections import OrderedDict
-import matplotlib as plt
+import matplotlib.pyplot as plt
 from math import floor
 
 from numpy.testing.utils import assert_almost_equal
@@ -7,12 +7,13 @@ from scipy.ndimage.filters import gaussian_filter
 from scipy.stats import multivariate_normal, entropy
 
 import numpy as np
+import math
 
 # from .visualization import plot_phi_d_diagram_bgr
 
 from scipy.stats import multivariate_normal
 from scipy.ndimage.filters import gaussian_filter
-from math import floor, sqrt
+from math import floor, sqrt, ceil
 import copy
 
 
@@ -70,6 +71,7 @@ class LaneFilterHistogram:
         self.use_yellow = True
         self.range_est_min = 0
         self.filtered_segments = []
+        self.segm = []
 
     def get_entropy(self):
         belief = self.beliefArray[0]
@@ -165,7 +167,6 @@ class LaneFilterHistogram:
                 # print 'Adding segment to segmentsRangeArray[0] (Range: %s < 0.3)' % (point_range)
                 # print 'Printout of last segment added: %s' % self.getSegmentDistance(segmentsRangeArray[0][-1])
                 # print 'Length of segmentsRangeArray[0] up to now: %s' % len(segmentsRangeArray[0])
-
             # split segments ot different domains for the curvature estimation
             if self.curvature_res is not 0:
 
@@ -177,7 +178,7 @@ class LaneFilterHistogram:
                         # print 'Printout of last segment added: %s' % self.getSegmentDistance(segmentsRangeArray[i + 1][-1])
                         # print 'Length of segmentsRangeArray[%i] up to now: %s' % (i + 1, len(segmentsRangeArray[i + 1]))
                         continue
-
+            self.segm.append([segment, False])
         # print functions to help understand the functionality of the code
         # for i in range(len(segmentsRangeArray)):
         #     print 'Length of segmentsRangeArray[%i]: %i' % (i, len(segmentsRangeArray[i]))
@@ -202,12 +203,12 @@ class LaneFilterHistogram:
                 self.range_arr[i] = self.range_min + (i * range_diff)
 
     # generate the belief arrays
-    def update(self, segments):
+    def update(self, segments , no, data):
         # prepare the segments for each belief array
         segmentsRangeArray = self.prepareSegments(segments)
         # generate all belief arrays
         for i in range(self.curvature_res + 1):
-            measurement_likelihood = self.generate_measurement_likelihood(segmentsRangeArray[i])
+            measurement_likelihood = self.generate_measurement_likelihood(segmentsRangeArray[i], no, data)
 
             if measurement_likelihood is not None:
                 self.beliefArray[i] = np.multiply(self.beliefArray[i], measurement_likelihood)
@@ -216,22 +217,80 @@ class LaneFilterHistogram:
                 else:
                     self.beliefArray[i] = self.beliefArray[i] / np.sum(self.beliefArray[i])
 
-    def generate_measurement_likelihood(self, segments):
+    def generate_measurement_likelihood(self, segments, no, data):
 
         # initialize measurement likelihood to all zeros
+        ##shape for normal
         measurement_likelihood = np.zeros(self.d.shape)
+        ## shape for plotting
+        measurement_likelihood_1 = np.zeros((30,23))
+        seg = []
+        k = 0
 
         for segment in segments:
             d_i, phi_i, l_i, weight = self.generateVote(segment)
 
             # if the vote lands outside of the histogram discard it
             if d_i > self.d_max or d_i < self.d_min or phi_i < self.phi_min or phi_i > self.phi_max:
+                self.segm.append([segment, False])
                 continue
+            self.segm.append([segment, True])
 
+            ### Mesurement_likelihood update with d in y axis and phi in x axis
             i = int(floor((d_i - self.d_min) / self.delta_d))
             j = int(floor((phi_i - self.phi_min) / self.delta_phi))
             measurement_likelihood[i, j] = measurement_likelihood[i, j] + 1
 
+            ### Mesurement_likelihood update with d in y axis and phi in x axis
+            m = int(floor((self.d_max - d_i) / self.delta_d))
+            n = int(floor((phi_i - self.phi_min) / self.delta_phi))
+            measurement_likelihood_1[n, m] = measurement_likelihood_1[n, m] + 1
+            seg.append([segment["pixels_normalized_start"][0],segment["pixels_normalized_end"][0],segment["pixels_normalized_start"][1],segment["pixels_normalized_end"][1]])
+            # seg_1 = np.array(seg)
+            ### Used to plot both the plots simultaneously
+        plt.subplot(211)
+        plt.pcolormesh(measurement_likelihood_1)
+        plt.yticks(np.arange(0, 33, step=3), np.around(np.arange(self.phi_min*180/math.pi, self.phi_max*180/math.pi + self.delta_phi*180/math.pi*3, step=self.delta_phi*180/math.pi*3),decimals=1))
+        plt.xticks(np.arange(0, 23, step=2), np.around(np.arange(0.3, -0.15-0.02*2, step=-0.02*2), decimals=2))
+        column = int(floor((self.d_max - data[no][0]) / self.delta_d))
+        row = int(floor((data[no][1] - self.phi_min) / self.delta_phi))
+        plt.plot(row, column, "ro")
+        plt.plot((-1, 1), (0, 0), 'r:')
+        plt.plot((0, 0), (-1, 1), 'r:')
+        # plt.yticks(np.arange(0, 23, step=3),[0.3, 0.24, 0.18, 0.12, 0.06, 0, 0.06, 0.12 ]
+        plt.colorbar()
+        plt.subplot(212)
+        plt.xlim(1, -1)
+        plt.ylim(0, 0.5)
+        plt.ylabel("X-axis")
+        plt.xlabel("Y-axis")
+        # plt.plot([segment["pixels_normalized_start"][0],
+        #           segment["pixels_normalized_end"][0]],
+        #          [segment["pixels_normalized_start"][1],
+        #           segment["pixels_normalized_end"][1]])
+        for s in seg:
+            plt.plot(s[2:4], s[0:2])
+            # plt.show()
+            k += 1
+        maxids = np.unravel_index(
+            measurement_likelihood_1.argmax(), measurement_likelihood_1.shape)
+        d_max = self.d_max - (maxids[0]) * self.delta_d
+        plt.plot(d_max, 0, 'ro')
+        plt.show()
+        # plt.savefig('Image_{}_fig_{}.png'.format(no, k))
+
+        plt.clf()
+        # for segs in self.segm:
+        #     plt.xlim(1, -1)
+        #     plt.ylim(0, 1)
+        #     if segs[1] == True:
+        #         plt.plot([segs[0]["pixels_normalized_start"][1],
+        #                   segs[0]["pixels_normalized_end"][1]],[segs[0]["pixels_normalized_start"][0],
+        #                   segs[0]["pixels_normalized_end"][0]])
+        #     else:
+        #         plt.plot([segs[0]["pixels_normalized_start"][1], segs[0]["pixels_normalized_end"][1]],
+        #                  [segs[0]["pixels_normalized_start"][0],segs[0]["pixels_normalized_end"][0]], color='red', linestyle='dashed')
+        # plt.savefig("line_plot.png")
         if np.linalg.norm(measurement_likelihood) == 0:
             return None
         measurement_likelihood = measurement_likelihood / \
@@ -292,8 +351,8 @@ class LaneFilterHistogram:
         RV = multivariate_normal(self.mean_0, self.cov_0)
         for i in range(self.curvature_res + 1):
             self.beliefArray[i] = RV.pdf(pos)
-        plt.pyplot.contourf(self.d, self.phi, RV.pdf(pos))
-        plt.pyplot.show()
+        # plt.pyplot.contourf(self.d, self.phi, RV.pdf(pos))
+        # plt.pyplot.show()
 
     # generate a vote for one segment
     def generateVote(self, segment):

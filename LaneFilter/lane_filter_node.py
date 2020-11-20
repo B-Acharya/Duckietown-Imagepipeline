@@ -7,18 +7,19 @@ import json
 import time
 class LaneFilterNode(object):
 
-    def __init__(self, segmentlst):
+    def __init__(self, segmentlst, Image_no, data):
         self.node_name = "Lane Filter"
         self.active = True
         self.filter = LaneFilterHistogram()
         #actual code consists of a message too get the current velocity and angle
         self.velocity = 0.230000004172
         self.omega = 0.363478302956
-
+        self.Image_no = Image_no
         self.d_median = []
         self.phi_median = []
         self.latencyArray = []
         self.t_last_update = time.time()
+        self.data = data
 
         # Define Constants
         self.curvature_res = self.filter.curvature_res
@@ -72,7 +73,7 @@ class LaneFilterNode(object):
 
         # Step 2: update
 
-        self.filter.update(segment_list_msg)
+        self.filter.update(segment_list_msg, self.Image_no, self.data)
 
         # Step 3: build messages and publish things
         [d_max, phi_max] = self.filter.getEstimate()
@@ -89,12 +90,12 @@ class LaneFilterNode(object):
         max_val = self.filter.getMax()
         in_lane = max_val > self.filter.min_max
         # build lane pose message to send
-        lanePose = {"d": d_max[0], "phi": phi_max[0], "in_lane": in_lane, "status": "NORMAL"}
+        self.lanePose = {"d": d_max[0], "phi": phi_max[0], "in_lane": in_lane, "status": "NORMAL"}
         # lanePose.header.stamp = segment_list_msg.header.stamp
         # XXX: is it always NORMAL?
 
         if self.curvature_res > 0:
-            lanePose.curvature = self.filter.getCurvature(d_max[1:], phi_max[1:])
+            lanePose["curvature"] = self.filter.getCurvature(d_max[1:], phi_max[1:])
 
         # self.pub_lane_pose.publish(lanePose)
 
@@ -102,9 +103,9 @@ class LaneFilterNode(object):
         # TODO-TAL also, the CvBridge is re instantiated every time... 
         # publish the belief image
         # bridge = CvBridge()
-        belief_img =np.array(255 * self.filter.beliefArray[0]).astype("uint8")
+        # belief_img =np.array(255 * self.filter.beliefArray[0]).astype("uint8")
         # belief_img.header.stamp = segment_list_msg.header.stamp
-        cv2.imshow("belief_image", belief_img)
+        # cv2.imshow("belief_image", belief_img)
         
         
         
